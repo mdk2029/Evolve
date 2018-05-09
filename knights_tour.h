@@ -10,17 +10,22 @@
 
 extern std::default_random_engine& randomEngine();
 
+/**
+ * \ingroup Evolve
+ *
+ * This file defines the Knights tour problem as a Specimen that can be used
+ * to instantiate the Evolve::Generation class template
+ *
+ * We currently hardcode the chess board to be of size 8x8
+ *
+ * The problem is modeled as a sequence of 63 moves. The tour always start from
+ * position (4,4) (e5 in chess notation). Each move represents the row and col delta
+ * from the current position
+ */
+
 namespace KnightsTour {
 
-struct Pos {
-    int row_;
-    int col_;
-
-    constexpr Pos(int row, int col) :
-        row_{row}, col_{col}
-    {}
-};
-
+/// Represents a move by storing its row and column deltas from the current position
 struct Mov {
 
     int rdelta_;
@@ -45,15 +50,30 @@ struct Mov {
 
 };
 
+/// These are the possible moves from a position. Depending on the position
+/// and the tour so far, not all of these moves will be applicable
 constexpr auto moves = {Mov{1,2},Mov{1,-2},Mov{2,1},Mov{2,-1},
                         Mov{-1,2},Mov{-1,-2},Mov{-2,1},Mov{-2,-1}
                        };
 
+/// Represents a position on a chess board
+struct Pos {
+    int row_;
+    int col_;
+
+    constexpr Pos(int row, int col) :
+        row_{row}, col_{col}
+    {}
+};
+
+/// Helper function to construct an array of N items obtained by the generating function
+/// f
 template<typename F, size_t... Is>
 inline auto make_array(F f, std::index_sequence<Is...>) -> std::array<decltype(f()),sizeof...(Is)> {
     return {((void)Is, f())...};
 }
 
+/// Represents a sequence of 63 moves
 struct Tour {
     static constexpr auto length = 63;
     static constexpr auto numRows = 8;
@@ -62,6 +82,7 @@ struct Tour {
 
     std::array<Mov,length> tour_;
 
+    /// An inner helper class that tracks the tour so far
     struct Board {
         unsigned board_[numRows][numCols];
         unsigned nextMovIdx { 2 };
@@ -75,6 +96,8 @@ struct Tour {
             board_[startPos.row_][startPos.col_] = 1;
         }
 
+        /// Given the board so far, can mov be applied? If so, apply
+        /// mov and update the board
         boost::optional<Pos> maybeApplyMove(const Pos& old, const Mov& mov) {
             auto newRow = old.row_ + mov.rdelta_;
             auto newCol = old.col_ + mov.cdelta_;
@@ -87,6 +110,9 @@ struct Tour {
             }
         }
 
+        /// Apply the tour for as long as possible. Note that not all
+        /// tours are valid so in general only a prefix of the tour
+        /// will be applicable before we run into a deadend
         void applyTour(const Tour& tour) {
             Pos pos = startPos;
             for(const auto& mov : tour.tour_) {
@@ -123,6 +149,7 @@ struct Tour {
         return numValidSteps() == Tour::length;
     }
 
+    /// Ordering function needed because we store tours in a memoizing cache
     bool operator< (const Tour& rhs) const {
         for(size_t i = 0; i < rhs.tour_.size(); i++) {
             if(!(tour_[i] == rhs.tour_[i])) {
@@ -131,23 +158,21 @@ struct Tour {
         }
         return false;
     }
+
+    static Tour random() {
+        auto randomMove = []() {
+            static std::uniform_int_distribution<uint8_t> distribution(0,7);
+            return *(std::cbegin(moves) + distribution(randomEngine()));
+        };
+
+        Tour tour{make_array(randomMove,std::make_index_sequence<Tour::length>())};
+        return tour;
+    }
 };
-
-inline
-Tour randomTour() {
-    auto randomMove = []() {
-        static std::uniform_int_distribution<uint8_t> distribution(0,7);
-        return *(std::cbegin(moves) + distribution(randomEngine()));
-    };
-
-    Tour tour{make_array(randomMove,std::make_index_sequence<Tour::length>())};
-    return tour;
-}
 
 inline
 std::ostream& operator<<(std::ostream& os, const Tour& t) {
     Tour::Board board{t};
-    //std::string line{"X-----\tX-----\tX-----\tX-----\tX-----\tX-----\tX-----\tX-----\tX"};
     std::string line{"---------------------------------"};
     os << line << '\n';
     for(int r : {7,6,5,4,3,2,1,0}) {
@@ -167,12 +192,19 @@ std::ostream& operator<<(std::ostream& os, const Tour& t) {
     return os;
 }
 
+/// The fitness function of the specimen
+/// The fittest specimen will have a score of 63
+/// corresponding to a solved Tour
 inline
 unsigned score(const Tour& t) {
+
+    /// This is the actual fitness function
     auto realScore = [](const Tour& t) {
         return t.numValidSteps();
     };
 
+    /// We memoize the call since we might be evaulating the same tour multiple
+    /// times
     using CacheT = Memoizer::Cache<decltype(realScore), std::decay_t<decltype(t)>>;
     static Memoizer::Memoizer<CacheT, decltype(realScore)> memoizer_s{realScore};
 
@@ -203,6 +235,11 @@ Tour mutate(const Tour& tour) {
     return mutated;
 }
 
+/// It can be seen from the Genetics Algo literature that just crossover and mutation
+/// are not enough to generate valid solutions to this problem when using discretized
+/// evolution. A common approach suggested is to extend the semantics of mutation
+/// with "nurture" - i.e. increase the fitness of a child. To do this
+/// we fix up a child specimen so that it has a longer valid prefix tour.
 inline
 Tour extend(const Tour& t) {
 
@@ -216,6 +253,8 @@ Tour extend(const Tour& t) {
             pos = *newPos;
         } else {
             bool extended = false;
+            /// Todo: Apply Warnsdorff's heuristic to select a move from
+            /// multiple applicable moves
             for(const auto& mov : moves) {
                 newPos = board.maybeApplyMove(pos,mov);
                 if(newPos) {
@@ -234,6 +273,8 @@ Tour extend(const Tour& t) {
     return tour;
 }
 
+/// Mating involves selecting parents, creating offsprings, mutating children
+/// and then extending the children
 inline
 std::tuple<Tour, Tour> mate(const Tour& first, const Tour& second) {
 

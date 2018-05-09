@@ -9,8 +9,32 @@
 
 extern std::default_random_engine& randomEngine();
 
+/**
+ * \ingroup Evolve
+ *
+ * This file defines the NQueens problem as a Specimen that can be used
+ * to instantiate the Evolve::Generation class template
+ *
+ * We currently hardcode N to 8.
+ *
+ * The problem is modeled as a sequence of 8 numbers which represent the
+ * position of a queen on each column of the chess board.
+ *
+ * See below for definitions of the fitness functions and mating
+ */
+
 namespace NQueens {
 
+/// Helper function to construct a std::array<> of N elements using
+/// the function F to generate the elements
+template<typename F, size_t... Is>
+inline
+auto make_array(F&& f, std::index_sequence<Is...>) -> std::array<decltype(f()),sizeof...(Is)> {
+    return {((void)Is,f())...};
+}
+
+/// A sequence of 8 numbers, each representing the position of a queen on a chessboard
+/// TODO remove hard-coded N=8
 struct Board {
     std::array<std::uint8_t, 8> board_;
 
@@ -35,6 +59,7 @@ struct Board {
         return numAttackingPairs() == 0;
     }
 
+    /// Ordering function needed because we store boards in a memoizing cache
     bool operator< (const Board& rhs) const {
         for(size_t i = 0; i < board_.size(); i++) {
             if(board_[i] != rhs.board_[i]) {
@@ -44,25 +69,17 @@ struct Board {
         return false;
     }
 
+    static Board random() {
+        auto randomPos = []() {
+            static std::uniform_int_distribution<uint8_t> distribution(0,7);
+            return distribution(randomEngine());
+        };
+        Board board{make_array(randomPos,std::make_index_sequence<8>())};
+        return board;
+    }
+
 };
 
-
-template<typename F, size_t... Is>
-inline
-auto make_array(F&& f, std::index_sequence<Is...>) -> std::array<decltype(f()),sizeof...(Is)> {
-    return {((void)Is,f())...};
-}
-
-
-inline
-Board randomBoard() {
-    auto randomPos = []() {
-        static std::uniform_int_distribution<uint8_t> distribution(0,7);
-        return distribution(randomEngine());
-    };
-    Board board{make_array(randomPos,std::make_index_sequence<8>())};
-    return board;
-}
 
 inline
 std::ostream& operator<<(std::ostream& os, const Board& b) {
@@ -74,19 +91,27 @@ std::ostream& operator<<(std::ostream& os, const Board& b) {
     return os;
 }
 
+
+/// The fitness function of the specimen.
+/// We have 8C2 = 28 possible attacking pairs
+/// The fittest specimen will have 0 attacking pairs
 inline
 unsigned score(const Board& b) {
-    //We have 8C2 = 28 possible attacking pairs
+
+    /// This is the actual fitness function
     auto realScore = [](const Board& b) {
         return 28 - b.numAttackingPairs();
     };
 
+    /// We memoize the call since we might be evaulating the same board multiple
+    /// times
     using CacheT =  Memoizer::Cache<decltype(realScore), std::decay_t<decltype(b)>>;
     static Memoizer::Memoizer<CacheT, decltype(realScore)> memoizer_s{realScore};
 
     return memoizer_s(b);
 }
 
+/// Given a crossing point, we create two children from two parents
 inline
 std::tuple<Board, Board> cross(const Board& first, const Board& second, uint8_t crossPoint) {
 
@@ -98,6 +123,7 @@ std::tuple<Board, Board> cross(const Board& first, const Board& second, uint8_t 
 
 }
 
+/// After a child is created, we further mutate it at a random point
 inline
 Board mutate(const Board& board) {
     static std::uniform_int_distribution<uint8_t> distribution(0,7);
@@ -109,6 +135,7 @@ Board mutate(const Board& board) {
     return mutated;
 }
 
+/// Mating consists of crossing over followed by a mutation
 std::tuple<Board, Board> mate(const Board& first, const Board& second) {
 
     //Select a random crossover point

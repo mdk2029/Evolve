@@ -8,13 +8,13 @@ int main(int argc, char** argv) {
     if(argc > 1 && std::string(argv[1]) == "nqueens" ) {
         //Start off with 50 boards.
         std::vector<NQueens::Board> initialBoards;
-        std::generate_n(std::back_inserter(initialBoards),50,NQueens::randomBoard);
+        std::generate_n(std::back_inserter(initialBoards),50,NQueens::Board::random);
         Evolve::Generation<NQueens::Board> seedGeneration{std::move(initialBoards)};
         Evolve::evolve(seedGeneration);
     } else if(argc > 1 && std::string(argv[1]) == "knightstour"){
         //Start off with 50 tours.
         std::vector<KnightsTour::Tour> initialTours;
-        std::generate_n(std::back_inserter(initialTours),50,KnightsTour::randomTour);
+        std::generate_n(std::back_inserter(initialTours),50,KnightsTour::Tour::random);
         Evolve::Generation<KnightsTour::Tour> seedGeneration{std::move(initialTours)};
         Evolve::evolve(seedGeneration);
     } else {

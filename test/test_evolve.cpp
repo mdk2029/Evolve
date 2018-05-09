@@ -1,6 +1,7 @@
 #include <random>
 #include "gtest/gtest.h"
 #include "evolve.h"
+#include "nqueens.h"
 #include "memoizer.h"
 #include <iostream>
 
