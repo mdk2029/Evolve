@@ -6,7 +6,7 @@
 #include <cmath>
 #include <ostream>
 #include "memoizer.h"
-#include <boost/optional.hpp>
+#include <optional>
 
 extern std::default_random_engine& randomEngine();
 
@@ -98,7 +98,7 @@ struct Tour {
 
         /// Given the board so far, can mov be applied? If so, apply
         /// mov and update the board
-        boost::optional<Pos> maybeApplyMove(const Pos& old, const Mov& mov) {
+        std::optional<Pos> maybeApplyMove(const Pos& old, const Mov& mov) {
             auto newRow = old.row_ + mov.rdelta_;
             auto newCol = old.col_ + mov.cdelta_;
             if (newRow >= 0 && newRow <= 7 && newCol >= 0 && newCol <=7
@@ -106,7 +106,7 @@ struct Tour {
                 board_[newRow][newCol] = nextMovIdx++;
                 return Pos{newRow, newCol};
             } else {
-                return boost::none;
+                return std::nullopt;
             }
         }
 

@@ -34,7 +34,6 @@ auto make_array(F&& f, std::index_sequence<Is...>) -> std::array<decltype(f()),s
 }
 
 /// A sequence of 8 numbers, each representing the position of a queen on a chessboard
-/// TODO remove hard-coded N=8
 struct Board {
     std::array<std::uint8_t, 8> board_;
 

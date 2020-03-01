@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.11)
 
 ##############################################################
 # Some common stuff
@@ -13,9 +13,10 @@ else()
     set(CMAKE_C_COMPILER clang CACHE STRING "C Compiler")
 endif()
 
-set(CMAKE_CXX_STANDARD 14 CACHE STRING "CXX Standard")
+set(CMAKE_CXX_STANDARD 17 CACHE STRING "CXX Standard")
 set(CMAKE_VERBOSE_MAKEFILE true CACHE BOOL "verbose make output")
 set(THREADS_PREFER_PTHREAD_FLAG ON CACHE STRING "use pthread")
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 ##############################################################
 # Define the project
@@ -39,9 +40,6 @@ target_sources(${PROJECT_NAME}
         "${EVOLVE_SRC}"
 )
 
-find_package(gtest REQUIRED HINTS ${CMAKE_CURRENT_LIST_DIR}/cmake)
-find_package(Boost REQUIRED)
-
 target_include_directories(${PROJECT_NAME}
     PUBLIC
     ${CMAKE_CURRENT_LIST_DIR}
@@ -51,5 +49,5 @@ target_include_directories(${PROJECT_NAME}
 # Add tests
 ##############################################################
 
-message("Adding test dir")
+# message("Adding test dir")
 add_subdirectory("test")

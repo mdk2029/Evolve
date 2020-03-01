@@ -1,8 +1,9 @@
 #pragma once
+
 #include <map>
 #include <tuple>
 #include <type_traits>
-#include <boost/optional.hpp>
+#include <optional>
 
 /**
  * \ingroup Evolve
@@ -28,8 +29,8 @@ struct Cache {
         cache_[key_t{args...}] = v;
     }
 
-    boost::optional<val_t> lookup(Args... args) const {
-        boost::optional<val_t> result = boost::none;
+    std::optional<val_t> lookup(Args... args) const {
+        std::optional<val_t> result;
         auto itr = cache_.find({args...});
         if(itr != cache_.end()) {
             result = itr->second;

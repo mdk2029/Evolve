@@ -1,5 +1,7 @@
+#define CATCH_CONFIG_MAIN
+
 #include <random>
-#include "gtest/gtest.h"
+#include <catch2/catch.hpp>
 #include "evolve.h"
 #include "nqueens.h"
 #include "memoizer.h"
@@ -15,13 +17,7 @@ public:
 
 };
 
-std::default_random_engine& randomEngine() {
-    static std::default_random_engine dre{std::random_device()()};
-    return dre;
-}
-
-
-GTEST_TEST(Evolve, generationConstructionTest) {
+TEST_CASE("generationConstructionTest", "[evolve]") {
 
     std::vector<MySpecimen> specimens;
     specimens.push_back(std::move(MySpecimen()));
@@ -29,9 +25,11 @@ GTEST_TEST(Evolve, generationConstructionTest) {
     specimens.push_back(std::move(MySpecimen()));
     Evolve::Generation<MySpecimen> generation(std::make_move_iterator(std::begin(specimens)),
                                               std::make_move_iterator(std::end(specimens)));
+
+    REQUIRE(!generation.hasSolutions());
 }
 
-GTEST_TEST(NQueens, BoardTest) {
+TEST_CASE("nqueens") {
     std::array<std::uint8_t, 8> defaultArray = {};
     NQueens::Board boarda{defaultArray}, boardb{defaultArray}, boardc{defaultArray};
     for(uint8_t idx = 0; idx < boarda.board_.size(); idx++) {
@@ -40,14 +38,14 @@ GTEST_TEST(NQueens, BoardTest) {
         boardc.board_[idx] = idx;
     }
 
-    ASSERT_LT(boarda, boardb);
-    ASSERT_FALSE(boardb < boarda);
+    REQUIRE(boarda < boardb);
+    REQUIRE_FALSE(boardb < boarda);
 
-    ASSERT_FALSE(boarda < boardc);
-    ASSERT_FALSE(boardc < boarda);
+    REQUIRE_FALSE(boarda < boardc);
+    REQUIRE_FALSE(boardc < boarda);
 }
 
-GTEST_TEST(Memoizer, memoizerTest) {
+TEST_CASE("memoizer") {
 
     int global{0};
 
@@ -59,10 +57,10 @@ GTEST_TEST(Memoizer, memoizerTest) {
     using CacheT = Memoizer::Cache<decltype(dummyScore), int, int>;
     static Memoizer::Memoizer<CacheT, decltype(dummyScore)> memoizer_s{dummyScore};
 
-    ASSERT_EQ(memoizer_s(5,10), 15);
-    ASSERT_EQ(global, 1);
+    REQUIRE(memoizer_s(5,10) == 15);
+    REQUIRE(global == 1);
 
-    ASSERT_EQ(memoizer_s(5,10), 15);
-    ASSERT_EQ(global, 1);
+    REQUIRE(memoizer_s(5,10) == 15);
+    REQUIRE(global == 1);
 }
 
